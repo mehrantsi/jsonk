@@ -33,12 +33,12 @@ JSONK implements the complete JSON specification (RFC 8259):
 JSONK delivers excellent performance for kernel space JSON operations:
 
 ### JSON Operations Performance
-- **Small JSON Parsing (~66 bytes)**: 2.38M ops/sec (150 MB/s throughput)
-- **Medium JSON Parsing (~252 bytes)**: 719K ops/sec (173 MB/s throughput)
-- **Large JSON Parsing (~65KB)**: 6K ops/sec (380 MB/s throughput)
-- **JSON Serialization**: 5.52M ops/sec (815 MB/s throughput)
-- **JSON Patching**: 823K ops/sec (42 MB/s throughput)
-- **Scalability**: Linear performance scaling (90-220 ns per element)
+- **Small JSON Parsing (~833 bytes, 10 objects)**: 425K ops/sec (337 MB/s throughput)
+- **Medium JSON Parsing (~8KB, 100 objects)**: 13.8K ops/sec (859 MB/s throughput)
+- **Large JSON Parsing (~1MB, 200 objects)**: 1.12K ops/sec (972 MB/s throughput)
+- **JSON Serialization**: 5.94M ops/sec (872 MB/s throughput)
+- **JSON Patching**: 827K ops/sec (42 MB/s throughput)
+- **Scalability**: Excellent scaling (53-220 ns per element as size increases)
 
 *Performance measured on Linux 6.8.0 in kernel space*
 
@@ -58,13 +58,132 @@ jsonk/
 └── Makefile              # Build system
 ```
 
+## Development Environment Setup
+
+JSONK includes a complete development environment using Docker devcontainers that works seamlessly with VS Code and supports both local development (using Colima on macOS) and cloud development (GitHub Codespaces).
+
+### Prerequisites
+
+#### For macOS (Local Development)
+- [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- [Homebrew](https://brew.sh/) (will be installed automatically if missing)
+
+#### For Linux (Local Development)
+- [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- Docker (will be installed automatically if missing)
+
+#### For GitHub Codespaces
+- Just a web browser! No local setup required.
+
+### Quick Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd jsonk
+   ```
+
+2. **Run the local setup script (macOS/Linux only):**
+   ```bash
+   bash .devcontainer/local-setup.sh
+   ```
+   
+   This script will:
+   - **macOS**: Install Homebrew, Colima, and Docker CLI, then start Colima with optimized settings
+   - **Linux**: Install Docker and development tools
+
+3. **Open in VS Code:**
+   ```bash
+   code .
+   ```
+
+4. **Start development container:**
+   - VS Code will prompt you to "Reopen in Container" - click it
+   - Or use Command Palette (`Cmd/Ctrl+Shift+P`) → "Dev Containers: Reopen in Container"
+
+### What's Included
+
+The development environment provides:
+
+- **Ubuntu 24.04** base with all necessary build tools
+- **Kernel development tools**: GCC, Make, kernel headers
+- **Node.js 18** for API development
+- **VS Code extensions**: C/C++ tools, Makefile support
+- **Privileged container** access for kernel module development
+- **Automatic setup** of kernel headers (Azure-specific for Codespaces)
+
+### Colima Configuration (macOS)
+
+The setup script configures Colima with optimal settings:
+- **4 CPU cores**
+- **8GB RAM**
+- **20GB disk space**
+- **VirtioFS mount type** for better file system performance
+- **ARM64 architecture** (Apple Silicon optimized)
+
+### Manual Setup (Alternative)
+
+If you prefer manual setup or need to troubleshoot:
+
+1. **Install Colima (macOS):**
+   ```bash
+   brew install colima docker
+   colima start --cpu 4 --memory 8 --disk 20 --vm-type vz --arch aarch64 --mount-type virtiofs
+   ```
+
+2. **Install Docker (Linux):**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y docker.io
+   sudo usermod -aG docker $USER
+   # Log out and back in
+   ```
+
+3. **Open in VS Code and select "Reopen in Container"**
+
+### Troubleshooting
+
+#### Colima Issues (macOS)
+```bash
+# Check Colima status
+colima status
+
+# Restart Colima if needed
+colima stop
+colima start --cpu 4 --memory 8 --disk 20 --vm-type vz --arch aarch64 --mount-type virtiofs
+
+# Check Docker connectivity
+docker info
+```
+
+#### Container Build Issues
+```bash
+# Rebuild container
+# In VS Code: Cmd/Ctrl+Shift+P → "Dev Containers: Rebuild Container"
+
+# Or manually:
+docker system prune -f
+# Then reopen in container
+```
+
+#### Kernel Header Issues
+The setup automatically handles kernel headers, but if you encounter issues:
+```bash
+# Check current kernel
+uname -r
+
+# Install headers manually (inside container)
+sudo apt-get update
+sudo apt-get install -y linux-headers-$(uname -r)
+```
+
 ## Quick Start
 
 ### Building
 
 ```bash
-# Clone or extract the jsonk library
-cd jsonk
+# Inside the development container:
+cd /workspaces/jsonk  # or your workspace path
 
 # Build all modules
 make

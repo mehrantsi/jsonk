@@ -59,7 +59,7 @@ static void print_performance(const char *test_name, u64 start_ns, u64 end_ns,
     if (total_ns > 0) {
         ops_per_sec = (u64)iterations * 1000000000ULL / total_ns;
         /* Calculate MB/s */
-        throughput_mb_s = (data_size * iterations * 1000000ULL) / (total_ns * 1024 * 1024 / 1000000000ULL);
+        throughput_mb_s = (data_size * iterations * 1000000000ULL) / (total_ns * 1024 * 1024);
     }
     
     printk(KERN_INFO "%s:\n", test_name);
@@ -75,30 +75,49 @@ static char *generate_simple_json(size_t target_size, size_t *actual_size)
 {
     char *json;
     size_t pos = 0;
-    int item_count = 0;
+    int i, j;
+    int num_objects;
+    int content_per_object;
     
     json = vmalloc(target_size);
     if (!json)
         return NULL;
     
-    /* Create a simple array of strings to reach target size without complex nesting */
-    pos += snprintf(json + pos, target_size - pos, "[");
+    /* Determine number of objects and content size based on target size */
+    if (target_size < 2048) {
+        num_objects = 10;          /* Small: 10 objects */
+        content_per_object = 15;   /* ~75 chars per object */
+    } else if (target_size < 32768) {
+        num_objects = 50;          /* Medium: 50 objects */
+        content_per_object = 30;   /* ~1.5KB per object */
+    } else {
+        num_objects = 100;         /* Large: 100 objects */
+        content_per_object = 60;   /* ~3KB per object */
+    }
     
-    /* Add string elements until we reach target size */
-    while (pos < target_size - 100) { /* Leave room for closing */
-        if (item_count > 0) {
+    pos += snprintf(json + pos, target_size - pos, "{\"items\":[");
+    
+    /* Create multiple objects with substantial content */
+    for (i = 0; i < num_objects && pos < target_size - 500; i++) {
+        if (i > 0) {
             pos += snprintf(json + pos, target_size - pos, ",");
         }
         
-        /* Add simple string elements - much faster to parse than objects */
         pos += snprintf(json + pos, target_size - pos, 
-                       "\"item_%d_data_string_content_value_%d\"",
-                       item_count, item_count);
-        item_count++;
+                       "{\"id\":%d,\"name\":\"item_%d\",\"description\":\"", i, i);
+        
+        /* Add substantial content to each object */
+        for (j = 0; j < content_per_object && pos < target_size - 300; j++) {
+            pos += snprintf(json + pos, target_size - pos, 
+                           "Content segment %d for item %d with meaningful data. ", j, i);
+        }
+        
+        pos += snprintf(json + pos, target_size - pos, 
+                       "\",\"value\":%d,\"active\":%s}", 
+                       i * 100, (i % 2) ? "true" : "false");
     }
     
-    /* Close array */
-    pos += snprintf(json + pos, target_size - pos, "]");
+    pos += snprintf(json + pos, target_size - pos, "],\"metadata\":{\"count\":%d,\"type\":\"test\"}}", i);
     
     *actual_size = pos;
     return json;
@@ -107,23 +126,38 @@ static char *generate_simple_json(size_t target_size, size_t *actual_size)
 static char *generate_large_json(void)
 {
     char *json;
-    int i;
+    size_t pos = 0;
+    int i, j;
+    int num_objects = 200;        /* Large: 200 objects */
+    int content_per_object = 60;  /* ~3KB per object */
     
     json = vmalloc(LARGE_JSON_SIZE);
     if (!json)
         return NULL;
     
-    strcpy(json, "{\"items\":[");
+    pos += snprintf(json + pos, LARGE_JSON_SIZE - pos, "{\"data\":[");
     
-    for (i = 0; i < 50; i++) {
-        char item[64];
-        snprintf(item, sizeof(item), 
-                "{\"id\":%d,\"name\":\"item_%d\",\"value\":%d}%s",
-                i, i, i * 10, (i < 49) ? "," : "");
-        strcat(json, item);
+    /* Create many objects with large content */
+    for (i = 0; i < num_objects && pos < LARGE_JSON_SIZE - 1000; i++) {
+        if (i > 0) {
+            pos += snprintf(json + pos, LARGE_JSON_SIZE - pos, ",");
+        }
+        
+        pos += snprintf(json + pos, LARGE_JSON_SIZE - pos, 
+                       "{\"id\":%d,\"name\":\"large_item_%d\",\"content\":\"", i, i);
+        
+        /* Add substantial content to each object */
+        for (j = 0; j < content_per_object && pos < LARGE_JSON_SIZE - 500; j++) {
+            pos += snprintf(json + pos, LARGE_JSON_SIZE - pos, 
+                           "Large content segment %d for item %d with extensive data and information. ", j, i);
+        }
+        
+        pos += snprintf(json + pos, LARGE_JSON_SIZE - pos, 
+                       "\",\"value\":%d,\"priority\":%d,\"active\":%s}", 
+                       i * 1000, i % 10, (i % 3) ? "true" : "false");
     }
     
-    strcat(json, "],\"metadata\":{\"count\":50,\"type\":\"test\"}}");
+    pos += snprintf(json + pos, LARGE_JSON_SIZE - pos, "],\"metadata\":{\"total\":%d,\"type\":\"large_dataset\",\"version\":\"2.0\"}}", i);
     
     return json;
 }
@@ -322,10 +356,10 @@ static void test_scalability(void)
     printk(KERN_INFO "=== Scalability Tests ===\n");
     
     /* Generate arrays of different sizes */
-    json_10 = generate_simple_json(360, &size_10);     /* ~10 elements */
-    json_100 = generate_simple_json(3870, &size_100);   /* ~100 elements */
-    json_1000 = generate_simple_json(41670, &size_1000); /* ~1000 elements */
-    json_5000 = generate_simple_json(221670, &size_5000); /* ~5000 elements */
+    json_10 = generate_simple_json(1024, &size_10);        /* ~10 elements */
+    json_100 = generate_simple_json(8192, &size_100);      /* ~100 elements */
+    json_1000 = generate_simple_json(65536, &size_1000);   /* ~1000 elements */
+    json_5000 = generate_simple_json(262144, &size_5000);  /* ~5000 elements */
     
     if (!json_10 || !json_100 || !json_1000 || !json_5000) {
         printk(KERN_ERR "Failed to generate scalability test data\n");
@@ -339,17 +373,17 @@ static void test_scalability(void)
     if (parsed) {
         printk(KERN_INFO "Array with 10 elements (%zu bytes): %llu ns\n", size_10, end - start);
         printk(KERN_INFO "  Time per element: %llu ns\n", (end - start) / 10);
-    jsonk_value_put(parsed);
-}
+        jsonk_value_put(parsed);
+    }
 
     start = get_time_ns();
     parsed = jsonk_parse(json_100, size_100);
     end = get_time_ns();
-        if (parsed) {
+    if (parsed) {
         printk(KERN_INFO "Array with 100 elements (%zu bytes): %llu ns\n", size_100, end - start);
         printk(KERN_INFO "  Time per element: %llu ns\n", (end - start) / 100);
-            jsonk_value_put(parsed);
-        }
+        jsonk_value_put(parsed);
+    }
         
     start = get_time_ns();
     parsed = jsonk_parse(json_1000, size_1000);
@@ -360,14 +394,14 @@ static void test_scalability(void)
         jsonk_value_put(parsed);
     }
         
-        start = get_time_ns();
+    start = get_time_ns();
     parsed = jsonk_parse(json_5000, size_5000);
-        end = get_time_ns();
-        if (parsed) {
+    end = get_time_ns();
+    if (parsed) {
         printk(KERN_INFO "Array with 5000 elements (%zu bytes): %llu ns\n", size_5000, end - start);
         printk(KERN_INFO "  Time per element: %llu ns\n", (end - start) / 5000);
-            jsonk_value_put(parsed);
-        }
+        jsonk_value_put(parsed);
+    }
         
 cleanup:
     if (json_10) vfree(json_10);
