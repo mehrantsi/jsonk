@@ -1,0 +1,33 @@
+{
+  "name": "HPKV Development Environment",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "runArgs": [
+    "--privileged"
+  ],
+  "mounts": [
+    "source=/dev/loop-control,target=/dev/loop-control,type=bind"
+  ],
+  "remoteEnv": {
+    "RUNNING_IN_CODESPACE": "${localEnv:RUNNING_IN_CODESPACE}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.makefile-tools"
+      ]
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true
+    }
+  }
+}
