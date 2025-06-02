@@ -610,16 +610,6 @@ jsonk_value_put(safe_ref);
 jsonk_value_put(shared_json);  // Only frees when all references released
 ```
 
-## Contributing
-
-Contributions are welcome! Please ensure:
-
-- Code follows kernel coding style
-- All functions are documented
-- Memory leaks are avoided
-- Thread safety considerations are documented
-- Performance impact is considered
-
 ## License
 
 This project is licensed under the GNU General Public License v2.0 - see the [LICENSE](LICENSE) file for details.
