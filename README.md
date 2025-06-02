@@ -101,20 +101,9 @@ JSONK includes a complete development environment using Docker devcontainers tha
    - VS Code will prompt you to "Reopen in Container" - click it
    - Or use Command Palette (`Cmd/Ctrl+Shift+P`) → "Dev Containers: Reopen in Container"
 
-### What's Included
-
-The development environment provides:
-
-- **Ubuntu 24.04** base with all necessary build tools
-- **Kernel development tools**: GCC, Make, kernel headers
-- **Node.js 18** for API development
-- **VS Code extensions**: C/C++ tools, Makefile support
-- **Privileged container** access for kernel module development
-- **Automatic setup** of kernel headers (Azure-specific for Codespaces)
-
 ### Colima Configuration (macOS)
 
-The setup script configures Colima with optimal settings:
+The setup script configures Colima with the following settings:
 - **4 CPU cores**
 - **8GB RAM**
 - **20GB disk space**
