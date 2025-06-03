@@ -5,14 +5,6 @@
  * capabilities for kernel space. It implements a zero-copy, single-pass parser
  * optimized for kernel space with minimal memory allocations.
  *
- * Features:
- * - Full JSON parsing (RFC 8259 compliant)
- * - JSON serialization
- * - Atomic JSON patching
- * - Memory-efficient data structures
- * - Lock-free design (caller handles synchronization)
- * - Optimized for kernel space
- *
  * Copyright (C) 2025 Mehran Toosi
  * Licensed under GPL-2.0
  */
